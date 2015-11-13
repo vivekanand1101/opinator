@@ -10,38 +10,39 @@ import source
 import source.items
 import source.settings
 
-class AmazonINScraper(scrapy.spiders.CrawlSpider):
-    """Extracts reviews from amazon.in"""
+class Flipkart(scrapy.spiders.CrawlSpider):
+    """ Extracts reviews from flipkart.com """
 
-    name = 'amazonin'
-    allowed_domains = ['www.amazon.in']
-    start_url_frame = 'http://www.amazon.in/gp/product/'
+    name = 'flipkartcom'
+    allowed_domains = ['www.flipkart.com']
+    #start_url_frame = 'http://www.amazon.in/gp/product/'
 
-    def __init__(self, product_id, **kwargs):
+    def __init__(self, product_id, url, **kwargs):
         self.product_id = product_id
-        self.start_urls = [self.start_url_frame + str(self.product_id)]
+        #self.start_urls = [self.start_url_frame + str(self.product_id)]
+        self.start_urls = [url]
 
-        review_page_link_extractor_regex = [r'.*/product-reviews/%s.*' % self.product_id]
+        review_page_link_extractor_regex = [r'.*/product-reviews/.*']
         self.review_page_link_extractor = scrapy.linkextractors.LinkExtractor(
                 allow = review_page_link_extractor_regex,
                 restrict_xpaths = (
-                    '//a[contains(@id, "acrCustomerReviewLink")]'
+                    '//div[contains(@class, "subLine")]'
                 )
         )
 
-        review_link_regex = [r'http://www.amazon.in/gp/customer-reviews/.*']
+        review_link_regex = [r'/reviews/.*']
         self.review_link = scrapy.linkextractors.LinkExtractor(
                 allow = review_link_regex,
                 restrict_xpaths = (
-                    '//a[contains(@class, "a-size-base a-link-normal review-title a-color-base a-text-bold")]'
+                    '//div[contains(@class, "review-list")]'
                 )
         )
 
-        pagination_regex_list = [r'/.*/product-reviews/%s.*' % self.product_id]
+        pagination_regex_list = [r'/.*/product-reviews/.*']
         self.paginate = scrapy.linkextractors.LinkExtractor(
                 allow = pagination_regex_list,
                 restrict_xpaths = (
-                    '//li[contains(@class, "a-last")]/a'
+                    '//a[contains(@class, "nav_bar_next_prev")][contains(., "Next Page")]'
                 )
         )
 
@@ -57,7 +58,7 @@ class AmazonINScraper(scrapy.spiders.CrawlSpider):
             )
         ]
 
-        super(AmazonINScraper, self).__init__(product_id, **kwargs)
+        super(Flipkart, self).__init__(product_id, **kwargs)
 
     def parse_items(self, response):
         hxs = scrapy.Selector(response)
@@ -75,14 +76,19 @@ class AmazonINScraper(scrapy.spiders.CrawlSpider):
             return ''
 
     def get_reviews(self, hxs):
-        reviews_path = hxs.xpath('//div[contains(@class, "reviewText")]/text()')
+        reviews_path = hxs.xpath('//span[contains(@class, "review-text")]/text()')
         try:
-            return reviews_path.extract()[0].strip()
+            rev = reviews_path.extract()
+            [i.strip() for i in rev]
+            review = ''
+            for i in rev:
+                review += i
+            return review
         except IndexError:
             return ''
 
     def is_verified(self, hxs):
-        verify_path = hxs.xpath('//b[contains(@class, "h3color tiny")]/text()')
+        verify_path = hxs.xpath('//div[contains(@class, "badge-certified-buyer")]/img[contains(@alt, "certified buyer")]/@src')
         try:
             temp = verify_path.extract()[0].strip()
             return True

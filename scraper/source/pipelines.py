@@ -1,9 +1,7 @@
-from requests import post
-import json
+from scrapy.exceptions import DropItem
 
 class scraperPipeline(object):
-
     def process_item (self, item, spider):
-        with open("%s.txt" % str(item['file_']), "a") as a:
-            a.write(str(item['reviews']))
+        if item['is_verified'] == False:
+            raise DropItem('Not a verified review')
         return item
