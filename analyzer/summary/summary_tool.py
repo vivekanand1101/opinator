@@ -115,11 +115,11 @@ def main():
 
     title = """Title
     """
-    f = open("input/axe_neg.txt", "r")
+    f = open("input_axe_neg.txt", "r")
     content = f.read()
     f.close()
 
-    f = open("output/bush/axe_neg.txt", "wb")    
+    f = open("output_bush_axe_neg.txt", "wb")
 
     # Create a SummaryTool object
     st = SummaryTool()

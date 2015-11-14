@@ -18,11 +18,11 @@ def textrank(document):
     return sorted(((scores[i],s) for i,s in enumerate(sentences)), reverse=True)
 
 
-f = open("input/axe_neg.txt", "r")
+f = open("input_axe_neg.txt", "r")
 document = f.read()
 f.close()
 
-f = open("output/pagerank/axe_neg.txt", "wb")
+f = open("output_pagerank_axe_neg.txt", "wb")
 
 ranked = textrank(document)
 summary = ""
