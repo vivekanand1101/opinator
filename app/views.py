@@ -1,4 +1,4 @@
-import scrapy
+import pandas as pd
 import os
 from flask import request
 from flask.json import jsonify
@@ -53,76 +53,126 @@ def update(website_name, product_id, url,
     product = is_present(website_name, product_id)
     product.sentiment_score = sentiment_score
     product.sentiment = sentiment
-    product.modified_on = datetime.now()
+    product.modified_on = datetime.utcnow()
     db.session.commit()
     return
 
-def calculate_sum_sentiments(results):
+def categorize_sentiment(result):
     """Calculates the sum of the sentiments.
         Each type of sentiment is assigned some value
         in the VALUES dictionary
     """
-
-    value, count = 0, 0
-    positive_count, negative_count, neutral_count = 0, 0, 0
-    very_positive_count, very_negative_count = 0, 0
-    for result in results:
-        count += 1
-        if result['sentiment'] == "Negative":
-            negative_count += 1
-        elif result['sentiment'] == "Very Negative":
-            very_negative_count += 1
-        elif result['sentiment'] == "Positive":
-            positive_count += 1
-        elif result['sentiment'] == "Very Positive":
-            very_positive_count += 1
-        else:
-            neutral_count += 1
-
-        value = value + VALUES[result['sentiment']]
-    return (count, value, positive_count, negative_count, neutral_count,
-            very_positive_count, very_negative_count)
-
-def categorize_sentiment(value):
-    """Categorizes sentiment on the basis of
-        sentiment values
-    """
-
-    if value <= -1:
-        result = 'Negative'
-    elif value > -0.5:
-        result = 'Positive'
-        value = abs(value)
+    # print 'result ', result
+    # print 'type ', type(result)
+    if result[0]['sentiment'] == "Negative":
+        return 'Negative'
+    elif result[0]['sentiment'] == "Very Negative":
+        return 'Very Negative'
+    elif result[0]['sentiment'] == "Positive":
+        return 'Positive'
+    elif result[0]['sentiment'] == "Very Positive":
+        return 'Very Positive'
     else:
-        result = 'Neutral'
-    return result
+        return 'Neutral'
 
-def calculate_sentiment(reviews):
+def get_sentiment_of_review (review):
     """Calculates the overall sentiment of the reviews"""
 
     #encoding reviews
-    new_rev = ''
-    for i in reviews:
-        i.encode('utf-8')
-        new_rev += i
+    #new_rev = review.encode('utf-8')
+    new_rev = review
+    #for i in reviews:
+        #i.encode('utf-8')
+     #   new_rev += i
 
     #getting the sentiment results
     #from the analyzer module
     nlp = StanfordNLP()
     results = nlp.parse(new_rev)
-    results = results['sentences']
+    result = results['sentences']
+    return categorize_sentiment(result)
 
+def execute_scraper_and_move_output_file (website_name, product_id):
+    spider_name = WEBSITE_TO_SPIDER[website_name]
+    cmd = "scrapy crawl %s -a product_id=%s -o %s.csv" % (spider_name, product_id, product_id)
+    os.chdir("./scraper")
+    os.system(cmd)
+    os.system('mkdir ../REVIEWS/ && mkdir ../REVIEWS/%s && mv %s.csv ../REVIEWS/%s/' % (product_id, product_id, product_id))
 
-    (count, value, positive_count, negative_count, neutral_count,
-            very_positive_count, very_negative_count) = calculate_sum_sentiments(results)
+def read_output_file(product_id):
+    #the scraper outputs the reviews to a csv file,
+    #named as product_id.csv in "REVIEW" folder
+    os.chdir('../REVIEWS/%s' % (product_id))
+    df = pd.read_csv('%s.csv' % (product_id))
+    return df
 
-    if count:
-        sentiment_value = float(value / (count * 1.0))
+def open_files(product_id):
+    pos_txt = open('%s_pos.txt' % (product_id), 'a')
+    neg_txt = open('%s_neg.txt' % (product_id), 'a')
+    neutral_txt = open('%s_neutral.txt' % (product_id), 'a')
+    return (pos_txt, neg_txt, neutral_txt)
 
-    overall_sentiment = categorize_sentiment(sentiment_value)
+def close_files(pos_txt, neg_txt, neutral_txt):
+    pos_txt.close()
+    neg_txt.close()
+    neutral_txt.close()
 
-    return (sentiment_value, overall_sentiment, positive_count, negative_count,
-                very_positive_count, very_negative_count, neutral_count)
+def categorize_reviews_and_get_counts(df, pos_txt, neg_txt, neutral_txt):
+    positive_count, negative_count, neutral_count = 0, 0, 0
+    very_positive_count, very_negative_count = 0, 0
+
+    for i in range(len(df.index)):
+        try:
+            review = df.reviews[i].encode('utf-8')
+        except:
+            continue
+        date = df.date[i]
+        sentiment = get_sentiment_of_review(review)
+
+        if sentiment is 'Positive' or sentiment is 'Very Positive':
+            pos_txt.write(review)
+
+            if sentiment is 'Positive':
+                positive_count += 1
+            else:
+                very_positive_count += 1
+
+        elif sentiment is 'Negative' or sentiment is 'Very Negative':
+            neg_txt.write(review)
+
+            if sentiment is 'Negative':
+                negative_count += 1
+            else:
+                very_negative_count += 1
+
+        else:
+            neutral_txt.write(review)
+            neutral_count += 1
+
+    #change the dir back to "opinator" folder
+    #remember it was in the product folder inside
+    #REVIEWS folder
+    os.chdir('..')
+    return (positive_count, negative_count, neutral_count, \
+                        very_positive_count, very_negative_count)
+
+def normalize_counts (positive_count, negative_count, neutral_count, \
+                                    very_positive_count, very_negative_count):
+    value = VALUES['Positive'] * positive_count + \
+            VALUES['Negative'] * negative_count + \
+            VALUES['Very Negative'] * very_negative_count + \
+            VALUES['Very Positive'] * very_positive_count
+
+    count = positive_count + negative_count + neutral_count + \
+            very_negative_count + very_positive_count
+
+    value = '%0.2f' % (value / (count * 1.0))
+    if value > 0:
+        return (value, 'Positive')
+    elif value < 0:
+        return (value, 'Negative')
+    else:
+        return (value, 'Neutral')
 
 @app.route('/', methods=['POST'])
 def plugin_response_handler():
@@ -143,33 +193,35 @@ def plugin_response_handler():
         else:
             outdated = True
 
-    #If it is not already analyzed, scraper is called
-    #prepare to run scraper
-    spider_name = WEBSITE_TO_SPIDER[website_name]
+    #if not then, call the scraper and the reviews
+    #The current working directory gets affected by this
+    #earlier it was "opinator" folder then in order to
+    #start the scraper, it is moved to "scraper" folder
+    execute_scraper_and_move_output_file (website_name, product_id)
 
-    cmd = "scrapy crawl %s -a product_id=%s" % (spider_name, product_id)
-    os.chdir("./scraper")
+    #read the reviews in the csv file
+    df = read_output_file(product_id)
 
-    #execution of the scraper
-    os.system(cmd)
+    (pos_txt, neg_txt, neutral_txt) = open_files(product_id)
 
-    #the scraper pipelines the reviews to a text file, named as product_id
-    with open('%s.txt' % str(product_id), 'r') as f:
+    (positive_count, negative_count, neutral_count, \
+            very_positive_count, very_negative_count) = categorize_reviews_and_get_counts \
+                                                                (df, pos_txt, neg_txt, neutral_txt)
 
-        #read in the reviews and analyze the data
-        (value, result, positive_count, negative_count, very_positive_count,
-                very_negative_count, neutral_count) = calculate_sentiment(f.read())
-    os.chdir("..")
+    close_files(pos_txt, neg_txt, neutral_txt)
+
+    (sentiment_score, sentiment) = normalize_counts (positive_count, negative_count, neutral_count, \
+                                                            very_positive_count, very_negative_count)
 
     #update the database if necessary otherwise, add a new product to the db
     if outdated:
         update(website_name=website_name, product_id=product_id, url=url,
-                sentiment_score=value, sentiment=str(result))
+                sentiment_score=sentiment_score, sentiment=str(sentiment))
     else:
         insert(website_name=website_name, product_id=product_id, url=url,
-                sentiment_score=value, sentiment=str(result))
+                sentiment_score=sentiment_score, sentiment=str(sentiment))
 
     #return the json object to the plugin
-    return jsonify(sentiment_score=str(value), sentiment=str(result), positive_count=str(positive_count),
+    return jsonify(sentiment_score=str(sentiment_score), sentiment=str(sentiment), positive_count=str(positive_count),
                     negative_count=str(negative_count), very_positive_count=str(very_positive_count),
                         very_negative_count=str(very_negative_count), neutral_count=str(neutral_count))

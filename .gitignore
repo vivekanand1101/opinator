@@ -55,4 +55,4 @@ analyzer/stanford-corenlp-full-2015-04-20/
 
 db_repository
 
-scraper/*.txt
+REVIEWS/
