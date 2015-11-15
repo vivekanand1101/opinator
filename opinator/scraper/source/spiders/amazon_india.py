@@ -77,7 +77,11 @@ class AmazonINScraper(scrapy.spiders.CrawlSpider):
     def get_reviews(self, hxs):
         reviews_path = hxs.xpath('//div[contains(@class, "reviewText")]/text()')
         try:
-            return reviews_path.extract()[0].strip()
+            revs = reviews_path.extract()
+            review = ''
+            for i in revs:
+                review += i.strip()
+            return review
         except IndexError:
             return ''
 

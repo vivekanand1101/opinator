@@ -1,13 +1,11 @@
-# coding=UTF-8
 from __future__ import division
 import re
 
-# This is a naive text summarization algorithm
-# Created by Shlomi Babluki
-# April, 2013
+class BushyPath(object):
 
-
-class SummaryTool(object):
+    def __init__(self, input_file, output_file):
+        self.input_file = input_file
+        self.output_file = output_file
 
     # Naive method for splitting a text into sentences
     def split_content_to_sentences(self, content):
@@ -41,7 +39,7 @@ class SummaryTool(object):
     # Convert the content into a dictionary <K, V>
     # k = The formatted sentence
     # V = The rank of the sentence
-    def get_senteces_ranks(self, content):
+    def get_sentences_ranks(self, content):
 
         # Split the content into sentences
         sentences = self.split_content_to_sentences(content)
@@ -108,38 +106,33 @@ class SummaryTool(object):
 
 
 # Main method, just run "python summary_tool.py"
-def main():
+    def summarize(self):
+        '''Main function which deals with summarizing
+        the text'''
 
-    # Demo
-    # Content from: "http://thenextweb.com/apps/2013/03/21/swayy-discover-curate-content/"
+        title = """Title
+        """
+        f = open(self.input_file, "r")
+        content = f.read()
+        f.close()
 
-    title = """Title
-    """
-    f = open("input_axe_neg.txt", "r")
-    content = f.read()
-    f.close()
+        f = open(self.output_file, "wb")
 
-    f = open("output_bush_axe_neg.txt", "wb")
+        # Create a SummaryTool object
+        #st = SummaryTool()
 
-    # Create a SummaryTool object
-    st = SummaryTool()
+        # Build the sentences dictionary
+        sentences_dic = self.get_sentences_ranks(content)
 
-    # Build the sentences dictionary
-    sentences_dic = st.get_senteces_ranks(content)
+        # Build the summary with the sentences dictionary
+        summary = self.get_summary(title, content, sentences_dic)
 
-    # Build the summary with the sentences dictionary
-    summary = st.get_summary(title, content, sentences_dic)
+        # Print the summary
+        print summary
+        f.write(summary)
 
-    # Print the summary
-    print summary
-    f.write(summary)
-
-    # Print the ratio between the summary length and the original length
-    print ""
-    print "Original Length %s" % (len(title) + len(content))
-    print "Summary Length %s" % len(summary)
-    print "Summary Ratio: %s" % (100 - (100 * (len(summary) / (len(title) + len(content)))))
-
-
-if __name__ == '__main__':
-    main()
+        # Print the ratio between the summary length and the original length
+        print ""
+        print "Original Length %s" % (len(title) + len(content))
+        print "Summary Length %s" % len(summary)
+        print "Summary Ratio: %s" % (100 - (100 * (len(summary) / (len(title) + len(content)))))

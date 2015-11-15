@@ -40,3 +40,4 @@ networkx
 numpy
 nltk
 sklearn
+pandas

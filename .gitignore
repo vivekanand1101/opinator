@@ -49,10 +49,10 @@ Temporary Items
 *.py~
 
 #corenlp
-analyzer/stanford-corenlp-full-2015-04-20/
+opinator/analyzer/stanford-corenlp-full-2015-04-20/
 
 *.wsgi
 
-db_repository
+opinator/db_repository
 
-REVIEWS/
+opinator/REVIEWS/
