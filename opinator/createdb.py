@@ -1,8 +1,12 @@
 #!flask/bin/python
+if __name__ == '__main__' and __package__ is None:
+    from os import sys, path
+    sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
+
 from migrate.versioning import api
-from config import SQLALCHEMY_DATABASE_URI
-from config import SQLALCHEMY_MIGRATE_REPO
-from app import db
+from opinator.config import SQLALCHEMY_DATABASE_URI
+from opinator.config import SQLALCHEMY_MIGRATE_REPO
+from opinator.app import db
 import os.path
 db.create_all()
 if not os.path.exists(SQLALCHEMY_MIGRATE_REPO):

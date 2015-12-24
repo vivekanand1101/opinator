@@ -25,3 +25,10 @@ A plugin to do sentiment analysis of reviews in ecommerce website.
 * Create a mysql database named `opinator`
 * [Grant all privileges to the user to this database](http://stackoverflow.com/questions/5016505/mysql-grant-all-privileges-on-database/5016587#5016587)
 * Run [createdb.py](https://github.com/SaptakS/opinator/blob/master/createdb.py)
+
+
+####Contributors
+* [Aditya Chaturvedi](https://github.com/apexkid)
+* [Rahul Ranjan](https://github.com/rahulrrixe)
+* [Saptak Sengupta](https://github.com/SaptakS)
+* [Vivek Anand](https://github.com/vivekanand1101)
